@@ -1,85 +1,88 @@
 "use client";
-
+import toast from "react-hot-toast";
 import { useEffect, useState } from "react";
 import NoteForm from "./component/NoteForm";
 import NoteCard from "./component/NoteCard";
+import {
+  fetchNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+} from "@/app/lib/api/notes";
+import { Note, NotePayload } from "@/app/types/note";
 
-type Note = {
-  _id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-};
-
-export default function Home() {
+const Home = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchNotes = async () => {
-    const res = await fetch("/api/notes");
-    const data = await res.json();
-    setNotes(data);
-  };
-
   useEffect(() => {
-    fetchNotes();
+    fetchNotes()
+      .then(setNotes)
+      .catch(() => toast.error("Failed to load notes"));
   }, []);
 
-  // CREATE
-  const createNote = async (data: { title: string; content: string }) => {
-    setLoading(true);
-    await fetch("/api/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    setLoading(false);
-    fetchNotes();
+  const handleCreate = async (payload: NotePayload) => {
+    try {
+      setLoading(true);
+      const newNote = await createNote(payload);
+      setNotes((prev) => [newNote, ...prev]);
+      toast.success("Note created");
+    } catch {
+      toast.error("Failed to create note");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // UPDATE
-  const updateNote = async (
-    id: string,
-    data: { title: string; content: string }
-  ) => {
-    await fetch(`/api/notes/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    fetchNotes();
+  const handleUpdate = async (id: string, payload: NotePayload) => {
+    try {
+      const updated = await updateNote(id, payload);
+      setNotes((prev) =>
+        prev.map((note) => (note._id === id ? updated : note))
+      );
+      toast.success("Note updated");
+    } catch {
+      toast.error("Failed to update note");
+    }
   };
 
-  // DELETE
-  const deleteNote = async (id: string) => {
-    await fetch(`/api/notes/${id}`, { method: "DELETE" });
-    fetchNotes();
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNote(id);
+      setNotes((prev) => prev.filter((note) => note._id !== id));
+      toast.success("Note deleted");
+    } catch {
+      toast.error("Failed to delete note");
+    }
   };
 
   return (
     <main className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Notes App</h1>
+        <h1 className="text-3xl text-zinc-900 text-center font-bold mb-6">
+          Notes App
+        </h1>
 
-        {/* Create */}
-        <NoteForm onSubmit={createNote} loading={loading} />
+        <NoteForm onSubmit={handleCreate} loading={loading} />
 
-        {/* List */}
-        <div className="space-y-4">
+        <div className="space-y-4 mt-6">
           {notes.map((note) => (
             <NoteCard
               key={note._id}
               note={note}
-              onDelete={deleteNote}
-              onUpdate={updateNote}
+              onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           ))}
-
           {notes.length === 0 && (
-            <p className="text-gray-500 text-center">No notes yet.</p>
+            <p className="text-gray-500 text-center">
+              No notes yet, create your first note.
+            </p>
           )}
         </div>
       </div>
     </main>
   );
-}
+};
+
+export default Home;

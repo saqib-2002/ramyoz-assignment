@@ -1,22 +1,29 @@
-// models/Note.ts
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose from "mongoose";
 
-const NoteSchema = new Schema(
+export interface INote extends Document {
+  title: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const NoteSchema: mongoose.Schema<INote> = new mongoose.Schema(
   {
     title: {
       type: String,
       required: true,
-      trim: true,
     },
     content: {
       type: String,
       required: true,
+      trim: true,
     },
   },
   {
-    timestamps: true, // createdAt, updatedAt
+    timestamps: true,
   }
 );
 
-const Note = models.Note || model("Note", NoteSchema);
+const Note: mongoose.Model<INote> =
+  mongoose.models.Note || mongoose.model<INote>("Note", NoteSchema);
 export default Note;

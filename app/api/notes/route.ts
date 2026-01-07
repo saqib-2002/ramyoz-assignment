@@ -2,24 +2,29 @@ import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/mongodb";
 import Note from "@/app/models/Note";
 
-// GET - fetch all notes
-export async function GET() {
-  try {
-    await connectDB();
-    const notes = await Note.find().sort({ createdAt: -1 });
-    return NextResponse.json(notes, { status: 200 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch notes" },
-      { status: 500 }
-    );
-  }
+interface CreateNoteBody {
+  title: string;
+  content: string;
 }
 
-// POST - create note
-export async function POST(req: Request) {
+// get notes
+const getNotes = async (): Promise<NextResponse> => {
   try {
-    const { title, content } = await req.json();
+    await connectDB();
+
+    const notes = await Note.find().sort({ createdAt: -1 });
+
+    return NextResponse.json(notes, { status: 200 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error, status: 500 });
+  }
+};
+
+// create notes
+const createNotes = async (req: Request): Promise<NextResponse> => {
+  try {
+    const body: CreateNoteBody = await req.json();
+    const { title, content } = body;
 
     if (!title || !content) {
       return NextResponse.json(
@@ -33,10 +38,10 @@ export async function POST(req: Request) {
     const note = await Note.create({ title, content });
 
     return NextResponse.json(note, { status: 201 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to create note" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return NextResponse.json({ error, status: 500 });
   }
-}
+};
+
+export const GET = getNotes;
+export const POST = createNotes;

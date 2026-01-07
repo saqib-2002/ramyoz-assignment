@@ -2,40 +2,52 @@ import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/mongodb";
 import Note from "@/app/models/Note";
 
-type Context = {
-  params: Promise<{
-    id: string;
-  }>;
+type RouteParams = {
+  id: string;
 };
 
-export async function PUT(req: Request, { params }: Context) {
+type RouteContext = {
+  params: Promise<RouteParams>;
+};
+
+interface UpdateNoteBody {
+  title?: string;
+  content?: string;
+}
+
+// update notes
+const updateNote = async (
+  req: Request,
+  { params }: RouteContext
+): Promise<NextResponse> => {
   try {
-    const { id } = await params; // ✅ FIX HERE
-    const data = await req.json();
+    const { id } = await params;
+    const body: UpdateNoteBody = await req.json();
 
     await connectDB();
 
-    const updatedNote = await Note.findByIdAndUpdate(id, data, {
+    const updatedNote = await Note.findByIdAndUpdate(id, body, {
       new: true,
+      runValidators: true,
     });
 
     if (!updatedNote) {
-      return NextResponse.json({ error: "Note not found" }, { status: 404 });
+      return NextResponse.json({ error: "Note not found", status: 404 });
     }
 
     return NextResponse.json(updatedNote, { status: 200 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to update note" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return NextResponse.json({ error, status: 500 });
   }
-}
+};
 
-// DELETE
-export async function DELETE(_: Request, { params }: Context) {
+// delete notes
+const deleteNotes = async (
+  _: Request,
+  { params }: RouteContext
+): Promise<NextResponse> => {
   try {
-    const { id } = await params; // ✅ FIX HERE
+    const { id } = await params;
 
     await connectDB();
     await Note.findByIdAndDelete(id);
@@ -44,10 +56,10 @@ export async function DELETE(_: Request, { params }: Context) {
       { message: "Note deleted successfully" },
       { status: 200 }
     );
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to delete note" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return NextResponse.json({ error, status: 500 });
   }
-}
+};
+
+export const PUT = updateNote;
+export const DELETE = deleteNotes;
